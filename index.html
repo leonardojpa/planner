@@ -236,6 +236,9 @@
       <option value="Não iniciado">Não iniciado</option>
       <option value="Em andamento">Em andamento</option>
     </select>
+    <select id="responsavelFilter">
+      <option value="">Todos responsáveis</option>
+    </select>
     <div class="legend">
       <span><i style="background:var(--urgente)"></i>Urgente</span>
       <span><i style="background:var(--importante)"></i>Importante</span>
@@ -254,7 +257,7 @@ const PRIO_ORDER = {'Urgente':4,'Importante':3,'Média':2,'Baixa':1,'':0};
 const PRIO_COLOR = {'Urgente':'var(--urgente)','Importante':'var(--importante)','Média':'var(--media)','Baixa':'var(--baixa)','':'var(--line)'};
 const PRIO_FILL = {'Urgente':'100%','Importante':'72%','Média':'45%','Baixa':'20%','':'8%'};
 
-let state = { tab:'suporte', search:'', prioridade:'', status:'' };
+let state = { tab:'suporte', search:'', prioridade:'', status:'', responsavel:'' };
 
 function extractClient(nome){
   const m = nome.match(/^\s*\[([^\]]+)\]/);
@@ -308,10 +311,15 @@ function toggleNotes(btn){
   btn.textContent = body.classList.contains('open') ? 'Ocultar notas' : 'Ver notas';
 }
 
+function splitNames(s){
+  return (s||'').split(';').map(x=>x.trim()).filter(Boolean);
+}
+
 function applyFilters(list){
   return list.filter(item=>{
     if(state.prioridade && item.prioridade !== state.prioridade) return false;
     if(state.status && item.status !== state.status) return false;
+    if(state.responsavel && !splitNames(item.atribuido).includes(state.responsavel)) return false;
     if(state.search){
       const s = state.search.toLowerCase();
       const hay = (item.nome+' '+item.atribuido+' '+item.categoria).toLowerCase();
@@ -353,6 +361,20 @@ function updateCounts(){
   document.getElementById('totalAndamento').textContent = all.filter(i=>i.status==='Em andamento').length;
 }
 
+function populateResponsavelFilter(){
+  const all = [...DATA.suporte, ...DATA.implantacao];
+  const names = new Set();
+  all.forEach(i => splitNames(i.atribuido).forEach(n => names.add(n)));
+  const sorted = [...names].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  const sel = document.getElementById('responsavelFilter');
+  sorted.forEach(n=>{
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = n;
+    sel.appendChild(opt);
+  });
+}
+
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -374,8 +396,13 @@ document.getElementById('statusFilter').addEventListener('change', e=>{
   state.status = e.target.value;
   render();
 });
+document.getElementById('responsavelFilter').addEventListener('change', e=>{
+  state.responsavel = e.target.value;
+  render();
+});
 
 updateCounts();
+populateResponsavelFilter();
 render();
 </script>
 </body>
